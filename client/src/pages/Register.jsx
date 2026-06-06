@@ -1,0 +1,67 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { registerUser } from '../store/slices/authSlice';
+
+const Register = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { loading } = useSelector(state => state.auth);
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'patient' });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const result = await dispatch(registerUser(form));
+    if (!result.error) navigate('/dashboard');
+  };
+
+  const inputCls = 'w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition';
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-4xl">🏥</span>
+          </div>
+          <h1 className="text-3xl font-bold text-white">Create Account</h1>
+          <p className="text-slate-400 mt-1">Join MediGuardian today</p>
+        </div>
+        <div className="bg-slate-800 rounded-2xl p-8 border border-slate-700">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {[
+              { label: 'Full Name', key: 'name', type: 'text', placeholder: 'John Doe' },
+              { label: 'Email', key: 'email', type: 'email', placeholder: 'your@email.com' },
+              { label: 'Phone', key: 'phone', type: 'tel', placeholder: '+91 98765 43210' },
+              { label: 'Password', key: 'password', type: 'password', placeholder: '••••••••' },
+            ].map(f => (
+              <div key={f.key}>
+                <label className="text-slate-300 text-sm font-medium block mb-2">{f.label}</label>
+                <input type={f.type} value={form[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                  required placeholder={f.placeholder} className={inputCls} />
+              </div>
+            ))}
+            <div>
+              <label className="text-slate-300 text-sm font-medium block mb-2">I am a</label>
+              <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} className={inputCls}>
+                <option value="patient">Patient</option>
+                <option value="caregiver">Caregiver</option>
+                <option value="family_member">Family Member</option>
+              </select>
+            </div>
+            <button type="submit" disabled={loading}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2 mt-2">
+              {loading ? <><span className="animate-spin">⏳</span> Creating...</> : '🚀 Create Account'}
+            </button>
+          </form>
+          <p className="text-center text-slate-400 mt-6">
+            Already have an account?{' '}
+            <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-medium">Login</Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Register;
