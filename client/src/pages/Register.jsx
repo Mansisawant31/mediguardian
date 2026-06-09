@@ -45,8 +45,9 @@ const Register = () => {
               <label className="text-slate-300 text-sm font-medium block mb-2">I am a</label>
               <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} className={inputCls}>
                 <option value="patient">Patient</option>
-                <option value="caregiver">Caregiver</option>
                 <option value="family_member">Family Member</option>
+                                <option value="caregiver">Society SOS Team</option>
+
               </select>
             </div>
             <button type="submit" disabled={loading}

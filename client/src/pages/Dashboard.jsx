@@ -102,43 +102,53 @@ const Dashboard = () => {
         </div>
 
         {/* Today's Schedule */}
+
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-white font-semibold text-lg">Today's Schedule</h2>
+            <h2 className="text-white font-semibold text-lg">📅 Today's Schedule</h2>
             <Link to="/medicines" className="text-emerald-400 text-sm">See all →</Link>
           </div>
           {reminders.length === 0 ? (
             <div className="bg-slate-800 rounded-2xl p-6 text-center border border-slate-700">
               <p className="text-4xl mb-2">💊</p>
-              <p className="text-slate-400">No reminders for today</p>
+              <p className="text-slate-400">No medicines scheduled today</p>
               <Link to="/medicines/add" className="text-emerald-400 text-sm mt-2 block">+ Add medicine</Link>
             </div>
-          ) : reminders.slice(0, 5).map(r => (
-            <div key={r._id} className={`bg-slate-800 rounded-2xl p-4 border border-l-4 mb-3 ${
-              r.status === 'taken' ? 'border-slate-700 border-l-emerald-500' :
-              r.status === 'missed' ? 'border-slate-700 border-l-red-500' :
-              'border-slate-700 border-l-yellow-500'}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">💊</span>
-                  <div>
-                    <p className="text-white font-medium">{r.medicine?.name}</p>
-                    <p className="text-slate-400 text-xs">{r.medicine?.dosage}</p>
+          ) : (
+            <div className="space-y-3">
+              {reminders.slice(0, 5).map(r => (
+                <div key={r._id} className={`bg-slate-800 rounded-2xl p-4 border border-l-4 ${r.status === 'taken' ? 'border-slate-700 border-l-emerald-500' :
+                    r.status === 'missed' ? 'border-slate-700 border-l-red-500' :
+                      'border-slate-700 border-l-yellow-500'
+                  }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center text-xl">💊</div>
+                      <div>
+                        <p className="text-white font-medium text-sm">{r.medicine?.name}</p>
+                        <p className="text-slate-400 text-xs">{r.medicine?.dosage}</p>
+                        <p className="text-slate-500 text-xs">
+                          ⏰ {new Date(r.scheduledTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${r.status === 'taken' ? 'bg-emerald-500/20 text-emerald-400' :
+                        r.status === 'missed' ? 'bg-red-500/20 text-red-400' :
+                          'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                      {r.status === 'taken' ? '✅ Taken' :
+                        r.status === 'missed' ? '⚠️ Missed' : '⏳ Pending'}
+                    </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-white text-sm">
-                    {new Date(r.scheduledTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    r.status === 'taken' ? 'bg-emerald-500/20 text-emerald-400' :
-                    r.status === 'missed' ? 'bg-red-500/20 text-red-400' :
-                    'bg-yellow-500/20 text-yellow-400'
-                  }`}>{r.status}</span>
-                </div>
-              </div>
+              ))}
+              {reminders.length > 5 && (
+                <Link to="/medicines" className="block text-center text-emerald-400 text-sm py-2">
+                  View all {reminders.length} medicines →
+                </Link>
+              )}
             </div>
-          ))}
+          )}
         </div>
 
         {/* Health Overview */}

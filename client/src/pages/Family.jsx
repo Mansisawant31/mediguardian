@@ -54,8 +54,10 @@ const Family = () => {
             <div>
               <label className="text-slate-300 text-xs mb-1 block">Relation</label>
               <select value={form.relation} onChange={e => setForm({ ...form, relation: e.target.value })} className={inputCls}>
-                {['spouse','parent','child','sibling','caregiver','friend','doctor','other'].map(r => (
-                  <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+                {['spouse', 'parent', 'child', 'sibling', 'caregiver', 'friend', 'doctor', 'society_team', 'other'].map(r => (
+                  <option key={r} value={r}>
+                    {r === 'society_team' ? '🏘️ Society SOS Team' : r.charAt(0).toUpperCase() + r.slice(1)}
+                  </option>
                 ))}
               </select>
             </div>
@@ -96,6 +98,7 @@ const Family = () => {
             <div className="flex gap-2 mt-3">
               {m.receiveAlerts && <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">⚠️ Alerts</span>}
               {m.receiveSOS && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full">🚨 SOS</span>}
+              {m.relation === 'society_team' && <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">🏘️ Society</span>}
             </div>
           </div>
         ))}
