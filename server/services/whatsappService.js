@@ -10,7 +10,7 @@ const getClient = () => {
     const token = process.env.TWILIO_AUTH_TOKEN;
 
     if (!sid || !token || sid === 'your_twilio_sid') {
-      return null; // Twilio not configured yet — skip silently
+      return null;
     }
 
     try {
@@ -28,6 +28,24 @@ const FROM = () => process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886';
 const formatNumber = (num) => {
   const clean = num.replace(/\D/g, '');
   return `whatsapp:+${clean.startsWith('91') ? clean : '91' + clean}`;
+};
+
+// ✅ NEW — Generic message sender used by SOS buttons
+exports.sendCustomMessage = async (toPhone, message) => {
+  const c = getClient();
+  if (!c) {
+    console.log('⚠️  WhatsApp skipped (Twilio not configured) — message would be:');
+    console.log(message);
+    return false;
+  }
+  try {
+    await c.messages.create({ body: message, from: FROM(), to: formatNumber(toPhone) });
+    console.log(`✅ WhatsApp sent to ${toPhone}`);
+    return true;
+  } catch (err) {
+    console.error('WhatsApp Error:', err.message);
+    return false;
+  }
 };
 
 exports.sendMissedDoseAlert = async (toPhone, userName, medicineName, scheduledTime) => {

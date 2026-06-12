@@ -5,6 +5,7 @@ import { fetchMedicines, deleteMedicine } from '../store/slices/medicineSlice';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import SnoozeAlarm from '../components/common/SnoozeAlarm';
 
 const typeIcons = {
   tablet: '💊', syrup: '🧴', injection: '💉',
@@ -150,27 +151,39 @@ const Medicines = () => {
                 </div>
 
                 {/* TAKEN + SNOOZE buttons — only for pending/snoozed */}
+               {/* TAKEN + SNOOZE buttons — only for pending/snoozed */}
                 {(r.status === 'pending' || r.status === 'snoozed') && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => takeMutation.mutate(r._id)}
-                      disabled={takeMutation.isLoading}
-                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2"
-                    >
-                      {takeMutation.isLoading ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>✅ Mark as Taken</>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => snoozeMutation.mutate(r._id)}
-                      disabled={snoozeMutation.isLoading}
-                      className="bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 px-4 rounded-xl text-sm transition"
-                    >
-                      ⏰ Snooze
-                    </button>
-                  </div>
+                  <>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => takeMutation.mutate(r._id)}
+                        disabled={takeMutation.isLoading}
+                        className="flex-1 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2"
+                      >
+                        {takeMutation.isLoading ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>✅ Mark as Taken</>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => snoozeMutation.mutate(r._id)}
+                        disabled={snoozeMutation.isLoading}
+                        className="bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 px-4 rounded-xl text-sm transition"
+                      >
+                        ⏰ Snooze
+                      </button>
+                    </div>
+
+                    {/* Snooze countdown + alarm */}
+                    {r.status === 'snoozed' && r.snoozeUntil && (
+                      <SnoozeAlarm
+                        medicineName={r.medicine?.name}
+                        snoozeUntil={r.snoozeUntil}
+                        onAlarm={() => refetchReminders()}
+                      />
+                    )}
+                  </>
                 )}
 
                 {/* Taken confirmation */}

@@ -23,7 +23,7 @@ const SOSPage = () => {
     );
   });
 
-  const handleSOS = async () => {
+ const handleSOS = async () => {
     if (!window.confirm('Send emergency SOS to ALL contacts?')) return;
     setLoading(true);
     setActiveAction('sos');
@@ -32,23 +32,30 @@ const SOSPage = () => {
       try { coords = await getLocation(); setLocation(coords); } catch { toast.error('Using default location'); }
       const { data } = await api.post('/sos', {
         lat: coords.lat, lng: coords.lng,
-        message: `Emergency! ${user?.name} needs immediate help!`,
+        type: 'sos',
       });
       setSent(true);
-      toast.success(`SOS sent to ${data.data.alertsSent?.length || 0} contacts!`);
+      toast.success(`SOS sent to ${data.data.alertsSent?.filter(a => a.success).length || 0} contacts!`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send SOS');
     } finally { setLoading(false); setActiveAction(null); }
   };
-
-  const handleGPSLocation = async () => {
+const handleGPSLocation = async () => {
     setLoading(true); setActiveAction('gps');
     try {
       const coords = await getLocation();
       setLocation(coords); setShowMap(true);
-      toast.success('Location fetched successfully!');
-    } catch { toast.error('Could not get location. Please enable GPS.'); }
-    finally { setLoading(false); setActiveAction(null); }
+
+      // Send live location to family
+      await api.post('/sos', {
+        lat: coords.lat, lng: coords.lng,
+        type: 'gps',
+      });
+
+      toast.success('📍 Location fetched and shared with family!');
+    } catch {
+      toast.error('Could not get location. Please enable GPS.');
+    } finally { setLoading(false); setActiveAction(null); }
   };
 
   const handleWhatsAppAlert = async () => {
@@ -58,9 +65,9 @@ const SOSPage = () => {
       try { coords = await getLocation(); setLocation(coords); } catch {}
       await api.post('/sos', {
         lat: coords.lat, lng: coords.lng,
-        message: `Emergency Alert! I need immediate assistance. My location: https://maps.google.com/?q=${coords.lat},${coords.lng}`,
+        type: 'whatsapp',
       });
-      toast.success('WhatsApp alerts sent to all family members!');
+      toast.success('📱 WhatsApp alerts sent to all family members!');
     } catch { toast.error('Failed to send WhatsApp alert'); }
     finally { setLoading(false); setActiveAction(null); }
   };
@@ -72,9 +79,9 @@ const SOSPage = () => {
       try { coords = await getLocation(); } catch {}
       await api.post('/sos', {
         lat: coords.lat, lng: coords.lng,
-        message: `Emergency Notification. An emergency has been triggered by ${user?.name}. Please check on them immediately.`,
+        type: 'family',
       });
-      toast.success('All family members notified!');
+      toast.success('👨‍👩‍👧 All family members notified!');
     } catch { toast.error('Failed to notify family'); }
     finally { setLoading(false); setActiveAction(null); }
   };
@@ -86,9 +93,9 @@ const SOSPage = () => {
       try { coords = await getLocation(); } catch {}
       await api.post('/sos', {
         lat: coords.lat, lng: coords.lng,
-        message: `Society SOS Alert! ${user?.name} needs immediate help from society security team! Location: https://maps.google.com/?q=${coords.lat},${coords.lng}`,
+        type: 'society',
       });
-      toast.success('Society SOS Team notified!');
+      toast.success('🏘️ Society SOS Team notified!');
     } catch { toast.error('Failed to notify society team'); }
     finally { setLoading(false); setActiveAction(null); }
   };

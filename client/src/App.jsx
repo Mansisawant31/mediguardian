@@ -18,12 +18,19 @@ import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import React, { useEffect } from 'react';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
 });
 
 function App() {
+ useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
