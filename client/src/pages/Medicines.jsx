@@ -22,10 +22,10 @@ const Medicines = () => {
   const { data: remindersData, refetch: refetchReminders } = useQuery(
     'today-reminders',
     () => api.get('/reminders').then(r => r.data.data),
-    { refetchInterval: 15000 }
+    { refetchInterval: 5000 }
   );
 
-  const takeMutation = useMutation(
+ const takeMutation = useMutation(
     (reminderId) => api.put(`/reminders/${reminderId}/take`),
     {
       onSuccess: () => {
@@ -175,11 +175,12 @@ const Medicines = () => {
                       </button>
                     </div>
 
-                    {/* Snooze countdown + alarm */}
-                    {r.status === 'snoozed' && r.snoozeUntil && (
+                  {/* Snooze countdown + alarm */}
+                    {r.snoozeUntil && (
                       <SnoozeAlarm
                         medicineName={r.medicine?.name}
                         snoozeUntil={r.snoozeUntil}
+                        status={r.status}
                         onAlarm={() => refetchReminders()}
                       />
                     )}

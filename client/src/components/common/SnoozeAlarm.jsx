@@ -1,12 +1,22 @@
 // client/src/components/common/SnoozeAlarm.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 
-const SnoozeAlarm = ({ medicineName, snoozeUntil, onAlarm }) => {
+const SnoozeAlarm = ({ medicineName, snoozeUntil, status, onAlarm }) => {
   const [timeLeft, setTimeLeft] = useState(null);
+  const alarmFiredRef = useRef(false);
 
   useEffect(() => {
+    // Stop everything if medicine is already taken/skipped
+    if (status === 'taken' || status === 'skipped') {
+      setTimeLeft(null);
+      alarmFiredRef.current = false;
+      return;
+    }
+
     if (!snoozeUntil) return;
+
+    alarmFiredRef.current = false;
 
     const interval = setInterval(() => {
       const now = new Date().getTime();
@@ -17,58 +27,52 @@ const SnoozeAlarm = ({ medicineName, snoozeUntil, onAlarm }) => {
         clearInterval(interval);
         setTimeLeft(0);
 
-        // 🔔 Trigger alarm notification
-        playAlarmSound();
-        showBrowserNotification(medicineName);
-        toast((t) => (
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⏰</span>
-            <div>
-              <p className="font-semibold">Medicine Time!</p>
-              <p className="text-sm">Time to take {medicineName}</p>
+        if (!alarmFiredRef.current) {
+          alarmFiredRef.current = true;
+          playAlarmSound();
+          showBrowserNotification(medicineName);
+          toast((t) => (
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⏰</span>
+              <div>
+                <p className="font-semibold">Medicine Time!</p>
+                <p className="text-sm">Time to take {medicineName}</p>
+              </div>
             </div>
-          </div>
-        ), { duration: 8000, icon: '⏰' });
+          ), { duration: 8000, icon: '⏰' });
 
-        if (onAlarm) onAlarm();
+          if (onAlarm) onAlarm();
+        }
       } else {
         setTimeLeft(Math.ceil(diff / 1000));
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [snoozeUntil, medicineName, onAlarm]);
+  }, [snoozeUntil, medicineName, onAlarm, status]);
 
   const playAlarmSound = () => {
     try {
       const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
       audio.play().catch(() => {});
-      // Vibrate on mobile
       if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
     } catch (e) {}
   };
 
   const showBrowserNotification = (name) => {
-    if ('Notification' in window) {
-      if (Notification.permission === 'granted') {
-        new Notification('⏰ Medicine Reminder', {
-          body: `Time to take ${name}!`,
-          icon: '/logo.svg',
-          requireInteraction: true,
-        });
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(perm => {
-          if (perm === 'granted') {
-            new Notification('⏰ Medicine Reminder', {
-              body: `Time to take ${name}!`,
-              icon: '/logo.svg',
-            });
-          }
-        });
-      }
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notif = new Notification('⏰ Medicine Reminder', {
+        body: `Time to take ${name}!`,
+        icon: '/logo.svg',
+        tag: `medicine-${name}`, // prevents duplicate notifications stacking
+      });
+      // Auto close notification after 10 seconds
+      setTimeout(() => notif.close(), 10000);
     }
   };
 
+  // Don't render anything if taken/skipped or no countdown
+  if (status === 'taken' || status === 'skipped') return null;
   if (!snoozeUntil || timeLeft === null || timeLeft <= 0) return null;
 
   const minutes = Math.floor(timeLeft / 60);
