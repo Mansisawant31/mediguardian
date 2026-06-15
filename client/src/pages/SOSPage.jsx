@@ -23,7 +23,8 @@ const SOSPage = () => {
     );
   });
 
- const handleSOS = async () => {
+  // ✅ SOS Button — sends to ALL family members
+  const handleSOS = async () => {
     if (!window.confirm('Send emergency SOS to ALL contacts?')) return;
     setLoading(true);
     setActiveAction('sos');
@@ -31,73 +32,138 @@ const SOSPage = () => {
       let coords = { lat: 18.5204, lng: 73.8567 };
       try { coords = await getLocation(); setLocation(coords); } catch { toast.error('Using default location'); }
       const { data } = await api.post('/sos', {
-        lat: coords.lat, lng: coords.lng,
+        lat: coords.lat,
+        lng: coords.lng,
         type: 'sos',
       });
       setSent(true);
-      toast.success(`SOS sent to ${data.data.alertsSent?.filter(a => a.success).length || 0} contacts!`);
+      const successCount = data.data?.alertsSent?.filter(a => a.success).length || 0;
+      const totalCount = data.data?.alertsSent?.length || 0;
+      if (successCount > 0) {
+        toast.success(`🚨 SOS sent to ${successCount}/${totalCount} contacts via WhatsApp!`);
+      } else {
+        toast.error(data.message || 'SOS saved but WhatsApp not configured. Check Twilio settings.');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send SOS');
     } finally { setLoading(false); setActiveAction(null); }
   };
-const handleGPSLocation = async () => {
-    setLoading(true); setActiveAction('gps');
+
+  // ✅ GPS Location — fetches location + sends to family + shows map
+  const handleGPSLocation = async () => {
+    setLoading(true);
+    setActiveAction('gps');
     try {
       const coords = await getLocation();
-      setLocation(coords); setShowMap(true);
+      setLocation(coords);
+      setShowMap(true);
 
-      // Send live location to family
-      await api.post('/sos', {
-        lat: coords.lat, lng: coords.lng,
+      const { data } = await api.post('/sos', {
+        lat: coords.lat,
+        lng: coords.lng,
         type: 'gps',
       });
 
-      toast.success('📍 Location fetched and shared with family!');
+      const successCount = data.data?.alertsSent?.filter(a => a.success).length || 0;
+      const totalCount = data.data?.alertsSent?.length || 0;
+
+      if (successCount > 0) {
+        toast.success(`📍 Location shared with ${successCount}/${totalCount} family members!`);
+      } else if (totalCount === 0) {
+        toast('📍 Location fetched! Add family members with WhatsApp numbers to share location.', { icon: '📍' });
+      } else {
+        toast('📍 Location fetched! WhatsApp not configured — check Twilio settings.', { icon: '⚠️' });
+      }
     } catch {
       toast.error('Could not get location. Please enable GPS.');
     } finally { setLoading(false); setActiveAction(null); }
   };
 
+  // ✅ WhatsApp Alert — sends emergency message to ALL family members
   const handleWhatsAppAlert = async () => {
-    setLoading(true); setActiveAction('whatsapp');
+    setLoading(true);
+    setActiveAction('whatsapp');
     try {
       let coords = { lat: 18.5204, lng: 73.8567 };
       try { coords = await getLocation(); setLocation(coords); } catch {}
-      await api.post('/sos', {
-        lat: coords.lat, lng: coords.lng,
+
+      const { data } = await api.post('/sos', {
+        lat: coords.lat,
+        lng: coords.lng,
         type: 'whatsapp',
       });
-      toast.success('📱 WhatsApp alerts sent to all family members!');
-    } catch { toast.error('Failed to send WhatsApp alert'); }
-    finally { setLoading(false); setActiveAction(null); }
+
+      const successCount = data.data?.alertsSent?.filter(a => a.success).length || 0;
+      const totalCount = data.data?.alertsSent?.length || 0;
+
+      if (successCount > 0) {
+        toast.success(`📱 WhatsApp alert sent to ${successCount}/${totalCount} family members!`);
+      } else if (totalCount === 0) {
+        toast.error('No family members found. Please add family members with WhatsApp numbers first.');
+      } else {
+        toast.error(`WhatsApp failed for all ${totalCount} contacts. Check:\n1. Twilio credentials\n2. Family members joined sandbox`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send WhatsApp alert');
+    } finally { setLoading(false); setActiveAction(null); }
   };
 
+  // ✅ Family Notified — sends alert to family members with receiveAlerts=true
   const handleFamilyNotify = async () => {
-    setLoading(true); setActiveAction('family');
+    setLoading(true);
+    setActiveAction('family');
     try {
       let coords = { lat: 18.5204, lng: 73.8567 };
       try { coords = await getLocation(); } catch {}
-      await api.post('/sos', {
-        lat: coords.lat, lng: coords.lng,
+
+      const { data } = await api.post('/sos', {
+        lat: coords.lat,
+        lng: coords.lng,
         type: 'family',
       });
-      toast.success('👨‍👩‍👧 All family members notified!');
-    } catch { toast.error('Failed to notify family'); }
-    finally { setLoading(false); setActiveAction(null); }
+
+      const successCount = data.data?.alertsSent?.filter(a => a.success).length || 0;
+      const totalCount = data.data?.alertsSent?.length || 0;
+
+      if (successCount > 0) {
+        toast.success(`👨‍👩‍👧 Family alert sent to ${successCount}/${totalCount} members!`);
+      } else if (totalCount === 0) {
+        toast.error('No family members found. Please add family members first.');
+      } else {
+        toast.error('Family alert saved but WhatsApp sending failed. Check Twilio setup.');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to notify family');
+    } finally { setLoading(false); setActiveAction(null); }
   };
 
+  // ✅ Society SOS — sends to society_team members
   const handleSocietySOS = async () => {
-    setLoading(true); setActiveAction('society');
+    setLoading(true);
+    setActiveAction('society');
     try {
       let coords = { lat: 18.5204, lng: 73.8567 };
       try { coords = await getLocation(); } catch {}
-      await api.post('/sos', {
-        lat: coords.lat, lng: coords.lng,
+
+      const { data } = await api.post('/sos', {
+        lat: coords.lat,
+        lng: coords.lng,
         type: 'society',
       });
-      toast.success('🏘️ Society SOS Team notified!');
-    } catch { toast.error('Failed to notify society team'); }
-    finally { setLoading(false); setActiveAction(null); }
+
+      const successCount = data.data?.alertsSent?.filter(a => a.success).length || 0;
+      const totalCount = data.data?.alertsSent?.length || 0;
+
+      if (successCount > 0) {
+        toast.success(`🏘️ Society SOS sent to ${successCount}/${totalCount} contacts!`);
+      } else if (totalCount === 0) {
+        toast.error('No society contacts found. Add contacts with relation "Society SOS Team" in Family section.');
+      } else {
+        toast.error('Society alert saved but WhatsApp sending failed. Check Twilio setup.');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to notify society team');
+    } finally { setLoading(false); setActiveAction(null); }
   };
 
   const mapsLink = location ? `https://maps.google.com/?q=${location.lat},${location.lng}` : '#';
@@ -107,19 +173,24 @@ const handleGPSLocation = async () => {
     <div className="min-h-screen bg-slate-900 pb-24">
 
       <div className="bg-red-600 px-5 pt-12 pb-6 rounded-b-3xl">
-        <h1 className="text-white text-2xl font-bold text-center">Emergency SOS</h1>
-        <p className="text-red-100 text-sm text-center mt-1">Press SOS to alert all contacts immediately</p>
+        <h1 className="text-white text-2xl font-bold text-center">🚨 Emergency SOS</h1>
+        <p className="text-red-100 text-sm text-center mt-1">
+          Press SOS to alert all contacts immediately
+        </p>
       </div>
 
       <div className="px-5 mt-6 space-y-4">
 
+        {/* Main SOS Button */}
         <div className="flex justify-center my-4">
           <div className="relative">
             <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20 scale-150" />
             <button
               onClick={handleSOS}
               disabled={loading}
-              className={`relative w-40 h-40 rounded-full text-white font-bold shadow-2xl transition-all active:scale-95 disabled:cursor-not-allowed ${sent ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-red-500 hover:bg-red-600 shadow-red-500/50'}`}
+              className={`relative w-40 h-40 rounded-full text-white font-bold shadow-2xl transition-all active:scale-95 disabled:cursor-not-allowed ${
+                sent ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-red-500 hover:bg-red-600 shadow-red-500/50'
+              }`}
             >
               {loading && activeAction === 'sos' ? (
                 <div className="flex flex-col items-center gap-2">
@@ -142,11 +213,13 @@ const handleGPSLocation = async () => {
           </div>
         </div>
 
+        {/* SOS Confirmation */}
         {sent && location && (
           <div className="bg-emerald-500/20 border border-emerald-500 rounded-2xl p-4 text-center">
-            <p className="text-emerald-400 font-semibold">Emergency alerts sent to all contacts!</p>
-            <a href={mapsLink} target="_blank" rel="noreferrer" className="text-emerald-400 text-sm mt-2 block hover:underline">
-              View your location on Google Maps
+            <p className="text-emerald-400 font-semibold">✅ Emergency alerts sent!</p>
+            <a href={mapsLink} target="_blank" rel="noreferrer"
+              className="text-emerald-400 text-sm mt-2 block hover:underline">
+              📍 View your location on Google Maps →
             </a>
           </div>
         )}
@@ -157,45 +230,40 @@ const handleGPSLocation = async () => {
           </button>
         )}
 
+        {/* Emergency Options */}
         <h2 className="text-white font-semibold text-lg">Emergency Options</h2>
 
         <div className="space-y-3">
 
-          <button
-            onClick={handleGPSLocation}
-            disabled={loading}
-            className="w-full bg-slate-800 border border-blue-500/30 hover:border-blue-500 rounded-2xl p-4 flex items-center gap-4 transition-all disabled:opacity-50"
-          >
+          {/* GPS Location */}
+          <button onClick={handleGPSLocation} disabled={loading}
+            className="w-full bg-slate-800 border border-blue-500/30 hover:border-blue-500 rounded-2xl p-4 flex items-center gap-4 transition-all disabled:opacity-50">
             <div className="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">📍</div>
             <div className="text-left flex-1">
               <p className="text-white font-semibold">GPS Location</p>
-              <p className="text-slate-400 text-xs mt-0.5">Fetch live location and show nearby hospitals on map</p>
+              <p className="text-slate-400 text-xs mt-0.5">Fetch live location, share with family + show nearby hospitals</p>
             </div>
             {loading && activeAction === 'gps' && (
               <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             )}
           </button>
 
-          <button
-            onClick={handleWhatsAppAlert}
-            disabled={loading}
-            className="w-full bg-slate-800 border border-green-500/30 hover:border-green-500 rounded-2xl p-4 flex items-center gap-4 transition-all disabled:opacity-50"
-          >
+          {/* WhatsApp Alert */}
+          <button onClick={handleWhatsAppAlert} disabled={loading}
+            className="w-full bg-slate-800 border border-green-500/30 hover:border-green-500 rounded-2xl p-4 flex items-center gap-4 transition-all disabled:opacity-50">
             <div className="w-14 h-14 bg-green-500/20 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">📱</div>
             <div className="text-left flex-1">
               <p className="text-white font-semibold">WhatsApp Alert</p>
-              <p className="text-slate-400 text-xs mt-0.5">Send location and emergency message via WhatsApp</p>
+              <p className="text-slate-400 text-xs mt-0.5">Send emergency message + location to all family members</p>
             </div>
             {loading && activeAction === 'whatsapp' && (
               <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
             )}
           </button>
 
-          <button
-            onClick={handleFamilyNotify}
-            disabled={loading}
-            className="w-full bg-slate-800 border border-purple-500/30 hover:border-purple-500 rounded-2xl p-4 flex items-center gap-4 transition-all disabled:opacity-50"
-          >
+          {/* Family Notified */}
+          <button onClick={handleFamilyNotify} disabled={loading}
+            className="w-full bg-slate-800 border border-purple-500/30 hover:border-purple-500 rounded-2xl p-4 flex items-center gap-4 transition-all disabled:opacity-50">
             <div className="w-14 h-14 bg-purple-500/20 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">👨‍👩‍👧</div>
             <div className="text-left flex-1">
               <p className="text-white font-semibold">Family Notified</p>
@@ -206,11 +274,9 @@ const handleGPSLocation = async () => {
             )}
           </button>
 
-          <button
-            onClick={handleSocietySOS}
-            disabled={loading}
-            className="w-full bg-slate-800 border border-yellow-500/30 hover:border-yellow-500 rounded-2xl p-4 flex items-center gap-4 transition-all disabled:opacity-50"
-          >
+          {/* Society SOS Team */}
+          <button onClick={handleSocietySOS} disabled={loading}
+            className="w-full bg-slate-800 border border-yellow-500/30 hover:border-yellow-500 rounded-2xl p-4 flex items-center gap-4 transition-all disabled:opacity-50">
             <div className="w-14 h-14 bg-yellow-500/20 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">🏘️</div>
             <div className="text-left flex-1">
               <p className="text-white font-semibold">Society SOS Team</p>
@@ -223,12 +289,14 @@ const handleGPSLocation = async () => {
 
         </div>
 
+        {/* Map Section */}
         {showMap && location && (
           <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
             <div className="p-4 flex items-center justify-between">
-              <h3 className="text-white font-semibold">Your Location</h3>
-              <a href={hospitalsLink} target="_blank" rel="noreferrer" className="text-blue-400 text-sm hover:underline">
-                Nearby Hospitals
+              <h3 className="text-white font-semibold">📍 Your Location</h3>
+              <a href={hospitalsLink} target="_blank" rel="noreferrer"
+                className="text-blue-400 text-sm hover:underline">
+                Nearby Hospitals →
               </a>
             </div>
             <iframe
@@ -243,27 +311,38 @@ const handleGPSLocation = async () => {
               <p className="text-slate-400 text-xs">
                 Lat: {location.lat.toFixed(6)}, Lng: {location.lng.toFixed(6)}
               </p>
-              <a
-                href={hospitalsLink}
-                target="_blank"
-                rel="noreferrer"
-                className="block bg-blue-500 text-white text-center py-2 rounded-xl text-sm font-medium"
-              >
-                Find Nearby Hospitals
+              <a href={hospitalsLink} target="_blank" rel="noreferrer"
+                className="block bg-blue-500 text-white text-center py-2 rounded-xl text-sm font-medium">
+                🏥 Find Nearby Hospitals
               </a>
-              
-              <a  href={mapsLink}
-                target="_blank"
-                rel="noreferrer"
-                className="block bg-emerald-500 text-white text-center py-2 rounded-xl text-sm font-medium"
-              >
-                Open in Google Maps
+              <a href={mapsLink} target="_blank" rel="noreferrer"
+                className="block bg-emerald-500 text-white text-center py-2 rounded-xl text-sm font-medium">
+                📍 Open in Google Maps
               </a>
             </div>
           </div>
         )}
 
-      
+        {/* Info Cards */}
+        <div className="space-y-2 mt-2">
+          <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider">
+            What happens when you press SOS
+          </h3>
+          {[
+            { icon: '📍', title: 'Live GPS shared', desc: 'Your exact location sent to all contacts via WhatsApp' },
+            { icon: '📱', title: 'WhatsApp message', desc: 'Instant alert with Google Maps link sent to family' },
+            { icon: '👨‍👩‍👧', title: 'Family alerted', desc: 'All emergency contacts notified immediately' },
+            { icon: '🏘️', title: 'Society notified', desc: 'Society security team alerted immediately' },
+          ].map(item => (
+            <div key={item.title} className="bg-slate-800 rounded-xl p-3 border border-slate-700 flex gap-3">
+              <span className="text-xl">{item.icon}</span>
+              <div>
+                <p className="text-white text-sm font-medium">{item.title}</p>
+                <p className="text-slate-400 text-xs">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
 
       </div>
     </div>
