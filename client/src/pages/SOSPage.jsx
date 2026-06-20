@@ -323,26 +323,6 @@ const SOSPage = () => {
           </div>
         )}
 
-        {/* Info Cards */}
-        <div className="space-y-2 mt-2">
-          <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider">
-            What happens when you press SOS
-          </h3>
-          {[
-            { icon: '📍', title: 'Live GPS shared', desc: 'Your exact location sent to all contacts via WhatsApp' },
-            { icon: '📱', title: 'WhatsApp message', desc: 'Instant alert with Google Maps link sent to family' },
-            { icon: '👨‍👩‍👧', title: 'Family alerted', desc: 'All emergency contacts notified immediately' },
-            { icon: '🏘️', title: 'Society notified', desc: 'Society security team alerted immediately' },
-          ].map(item => (
-            <div key={item.title} className="bg-slate-800 rounded-xl p-3 border border-slate-700 flex gap-3">
-              <span className="text-xl">{item.icon}</span>
-              <div>
-                <p className="text-white text-sm font-medium">{item.title}</p>
-                <p className="text-slate-400 text-xs">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
 
       </div>
     </div>

@@ -1,21 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
+import AlarmManager from '../components/common/AlarmManager';
 
 const Settings = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector(state => state.auth);
+  const [showAlarmSettings, setShowAlarmSettings] = useState(false);
 
-  const handleLogout = () => { dispatch(logout()); navigate('/login'); };
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 pb-24">
+
+      {/* Header */}
       <div className="bg-slate-800 px-5 pt-12 pb-5 border-b border-slate-700">
         <h1 className="text-white text-2xl font-bold">Settings</h1>
       </div>
 
+      {/* Profile Card */}
       <div className="mx-5 mt-5 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl p-5">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl">
@@ -32,12 +40,45 @@ const Settings = () => {
       </div>
 
       <div className="px-5 mt-5 space-y-5">
+
+        {/* Alarm Settings */}
+        <div>
+          <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">
+            Alarm Settings
+          </h3>
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+            <button
+              onClick={() => setShowAlarmSettings(!showAlarmSettings)}
+              className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🔔</span>
+                <div className="text-left">
+                  <p className="text-white text-sm font-medium">Alarm Sound</p>
+                  <p className="text-slate-400 text-xs">
+                    {localStorage.getItem('alarmSoundName') || 'Default Beep'}
+                  </p>
+                </div>
+              </div>
+              <span className="text-slate-400 transition-transform duration-200" style={{
+                transform: showAlarmSettings ? 'rotate(90deg)' : 'rotate(0deg)'
+              }}>›</span>
+            </button>
+
+            {showAlarmSettings && (
+              <div className="px-4 pb-4 border-t border-slate-700 pt-4">
+                <AlarmManager />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* General Settings */}
         {[
           {
             title: 'Account',
             items: [
               { icon: '👤', label: 'Profile', desc: 'Edit your information' },
-              { icon: '🔔', label: 'Notifications', desc: 'Manage alert preferences' },
               { icon: '🔒', label: 'Privacy & Security', desc: 'Password and data' },
             ],
           },
@@ -51,10 +92,15 @@ const Settings = () => {
           },
         ].map(group => (
           <div key={group.title}>
-            <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">{group.title}</h3>
+            <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">
+              {group.title}
+            </h3>
             <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden divide-y divide-slate-700">
               {group.items.map(item => (
-                <button key={item.label} className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition text-left">
+                <button
+                  key={item.label}
+                  className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition text-left"
+                >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{item.icon}</span>
                     <div>
@@ -69,10 +115,14 @@ const Settings = () => {
           </div>
         ))}
 
-        <button onClick={handleLogout}
-          className="w-full bg-red-500/20 border border-red-500/30 text-red-400 py-4 rounded-2xl font-medium hover:bg-red-500/30 transition">
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          className="w-full bg-red-500/20 border border-red-500/30 text-red-400 py-4 rounded-2xl font-medium hover:bg-red-500/30 transition"
+        >
           🚪 Logout
         </button>
+
       </div>
     </div>
   );
