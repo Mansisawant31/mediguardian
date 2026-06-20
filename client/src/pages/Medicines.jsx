@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchMedicines, deleteMedicine } from '../store/slices/medicineSlice';
@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import SnoozeAlarm from '../components/common/SnoozeAlarm';
+import SnoozeModal from '../components/common/SnoozeModal';
 
 const typeIcons = {
   tablet: '💊', syrup: '🧴', injection: '💉',
@@ -16,6 +17,7 @@ const Medicines = () => {
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const { items: medicines, loading } = useSelector(state => state.medicines);
+  const [snoozeModal, setSnoozeModal] = useState(null);
 
   useEffect(() => { dispatch(fetchMedicines()); }, [dispatch]);
 
@@ -25,7 +27,7 @@ const Medicines = () => {
     { refetchInterval: 5000 }
   );
 
- const takeMutation = useMutation(
+  const takeMutation = useMutation(
     (reminderId) => api.put(`/reminders/${reminderId}/take`),
     {
       onSuccess: () => {
@@ -41,8 +43,8 @@ const Medicines = () => {
     (reminderId) => api.put(`/reminders/${reminderId}/snooze`, { minutes: 15 }),
     {
       onSuccess: () => {
-        toast.success('⏰ Snoozed for 15 minutes');
         queryClient.invalidateQueries('today-reminders');
+        refetchReminders();
       },
     }
   );
@@ -60,6 +62,18 @@ const Medicines = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 pb-24">
+
+      {/* ✅ Snooze Modal — renders on top of everything */}
+      {snoozeModal && (
+        <SnoozeModal
+          reminderId={snoozeModal}
+          onClose={() => setSnoozeModal(null)}
+          onSnooze={(id, minutes) => {
+            snoozeMutation.mutate(id);
+            setSnoozeModal(null);
+          }}
+        />
+      )}
 
       {/* Header */}
       <div className="bg-slate-800 px-5 pt-12 pb-5 border-b border-slate-700">
@@ -98,7 +112,7 @@ const Medicines = () => {
           </div>
         </div>
 
-        {/* Today's Schedule with TAKEN button */}
+        {/* Today's Schedule */}
         <h2 className="text-white font-semibold text-lg mb-3">📅 Today's Schedule</h2>
 
         {reminders.length === 0 ? (
@@ -150,8 +164,7 @@ const Medicines = () => {
                   </span>
                 </div>
 
-                {/* TAKEN + SNOOZE buttons — only for pending/snoozed */}
-               {/* TAKEN + SNOOZE buttons — only for pending/snoozed */}
+                {/* TAKEN + SNOOZE buttons */}
                 {(r.status === 'pending' || r.status === 'snoozed') && (
                   <>
                     <div className="flex gap-2">
@@ -162,20 +175,19 @@ const Medicines = () => {
                       >
                         {takeMutation.isLoading ? (
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <>✅ Mark as Taken</>
-                        )}
+                        ) : <>✅ Mark as Taken</>}
                       </button>
+
+                      {/* ✅ Snooze button opens modal */}
                       <button
-                        onClick={() => snoozeMutation.mutate(r._id)}
-                        disabled={snoozeMutation.isLoading}
+                        onClick={() => setSnoozeModal(r._id)}
                         className="bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 px-4 rounded-xl text-sm transition"
                       >
                         ⏰ Snooze
                       </button>
                     </div>
 
-                  {/* Snooze countdown + alarm */}
+                    {/* Snooze countdown timer */}
                     {r.snoozeUntil && (
                       <SnoozeAlarm
                         medicineName={r.medicine?.name}
@@ -229,7 +241,9 @@ const Medicines = () => {
         ) : (
           <div className="space-y-3">
             {medicines.map(med => {
-              const todayReminder = reminders.find(r => r.medicine?._id === med._id || r.medicine === med._id);
+              const todayReminder = reminders.find(
+                r => r.medicine?._id === med._id || r.medicine === med._id
+              );
               return (
                 <div key={med._id} className="bg-slate-800 rounded-2xl p-4 border border-slate-700">
                   <div className="flex items-center justify-between">
@@ -254,7 +268,6 @@ const Medicines = () => {
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
-                      {/* Today status badge */}
                       {todayReminder && (
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           todayReminder.status === 'taken' ? 'bg-emerald-500/20 text-emerald-400' :
@@ -265,7 +278,6 @@ const Medicines = () => {
                            todayReminder.status === 'missed' ? '⚠️ Missed' : '⏳ Pending'}
                         </span>
                       )}
-                      {/* Delete button */}
                       <button
                         onClick={() => handleDelete(med._id, med.name)}
                         className="text-red-400 hover:bg-red-500/10 p-1.5 rounded-xl transition text-sm"
@@ -275,7 +287,6 @@ const Medicines = () => {
                     </div>
                   </div>
 
-                  {/* Quick TAKEN button in medicine card */}
                   {todayReminder && (todayReminder.status === 'pending' || todayReminder.status === 'snoozed') && (
                     <button
                       onClick={() => takeMutation.mutate(todayReminder._id)}
@@ -296,7 +307,6 @@ const Medicines = () => {
                     </div>
                   )}
 
-                  {/* Pills progress bar */}
                   {med.totalPills && (
                     <div className="mt-3">
                       <div className="flex justify-between text-xs text-slate-400 mb-1">
