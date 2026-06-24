@@ -1,5 +1,8 @@
 const Reminder = require('../models/Reminder');
 const Notification = require('../models/Notification');
+const FamilyMember = require('../models/FamilyMember');
+const whatsappService = require('../services/whatsappService');
+const User = require('../models/User');
 
 exports.getReminders = async (req, res) => {
   try {
@@ -19,17 +22,21 @@ exports.takeReminder = async (req, res) => {
   try {
     const reminder = await Reminder.findById(req.params.id).populate('medicine');
     if (!reminder) return res.status(404).json({ success: false, message: 'Reminder not found' });
+
     reminder.status = 'taken';
     reminder.takenAt = new Date();
     await reminder.save();
+
     await Notification.create({
       user: req.user.id,
       title: '✅ Medicine Taken',
       message: `You took ${reminder.medicine.name} (${reminder.medicine.dosage})`,
       type: 'reminder',
     });
+
     const io = req.app.get('io');
     if (io) io.to(req.user.id.toString()).emit('reminder-taken', reminder);
+
     res.status(200).json({ success: true, data: reminder });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -57,6 +64,28 @@ exports.skipReminder = async (req, res) => {
     reminder.status = 'skipped';
     await reminder.save();
     res.status(200).json({ success: true, data: reminder });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ✅ NEW — Get missed reminders for alarm
+exports.getMissedReminders = async (req, res) => {
+  try {
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);
+    const sixtyMinutesAgo = new Date(now - 60 * 60 * 1000);
+
+    const missedReminders = await Reminder.find({
+      user: req.user.id,
+      status: 'pending',
+      scheduledTime: {
+        $gte: sixtyMinutesAgo,
+        $lte: fiveMinutesAgo,
+      },
+    }).populate('medicine', 'name type dosage color');
+
+    res.status(200).json({ success: true, data: missedReminders });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
