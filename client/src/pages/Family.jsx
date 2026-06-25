@@ -433,25 +433,7 @@ const Family = () => {
 
       </div>
 
-      {/* Info Card */}
-      {members.length > 0 && (
-        <div className="mx-5 mt-5 bg-slate-800 rounded-2xl p-4 border border-slate-700">
-          <h3 className="text-white text-sm font-semibold mb-2">ℹ️ How alerts work</h3>
-          <div className="space-y-1.5">
-            {[
-              { icon: '⚠️', text: 'Missed Dose — auto alert when you miss a medicine' },
-              { icon: '🚨', text: 'SOS — alert when you press the SOS button' },
-              { icon: '📱', text: 'Send Alert — manually notify a specific member' },
-              { icon: '🏘️', text: 'Society Team — gets separate society SOS alerts' },
-            ].map(item => (
-              <div key={item.icon} className="flex items-start gap-2">
-                <span className="text-sm flex-shrink-0">{item.icon}</span>
-                <p className="text-slate-400 text-xs">{item.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+     
 
     </div>
   );
