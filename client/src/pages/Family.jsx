@@ -362,29 +362,7 @@ const Family = () => {
                 </div>
               </div>
 
-              {/* Permission Badges */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {m.receiveAlerts && (
-                  <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full border border-blue-500/20">
-                    ⚠️ Missed Alerts
-                  </span>
-                )}
-                {m.receiveSOS && (
-                  <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/20">
-                    🚨 SOS Alerts
-                  </span>
-                )}
-                {m.relation === 'society_team' && (
-                  <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full border border-yellow-500/20">
-                    🏘️ Society Team
-                  </span>
-                )}
-                {!m.whatsapp && (
-                  <span className="text-xs bg-slate-600/50 text-slate-500 px-2 py-1 rounded-full">
-                    ⚠️ No WhatsApp
-                  </span>
-                )}
-              </div>
+             
             </div>
 
             {/* Action Buttons */}
