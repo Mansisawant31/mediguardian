@@ -24,11 +24,42 @@ const queryClient = new QueryClient({
 });
 
 function App() {
- useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
+useEffect(() => {
+  // Request notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  // Register and start service worker background check
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      const token = localStorage.getItem('token');
+      const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+      const sendToSW = (sw) => {
+        sw.postMessage({
+          type: 'START_BACKGROUND_CHECK',
+          token,
+          apiBase,
+        });
+      };
+
+      if (reg.active) sendToSW(reg.active);
+      else if (reg.installing) reg.installing.addEventListener('statechange', e => {
+        if (e.target.state === 'activated') sendToSW(e.target);
+      });
+
+      // Listen for SW messages
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data.type === 'MEDICINE_TAKEN') {
+          window.dispatchEvent(new CustomEvent('medicine-taken', {
+            detail: { reminderId: event.data.reminderId }
+          }));
+        }
+      });
+    });
+  }
+}, []);
 
   return (
     <Provider store={store}>
