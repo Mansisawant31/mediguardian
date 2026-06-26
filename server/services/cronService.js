@@ -5,38 +5,61 @@ const User = require('../models/User');
 const FamilyMember = require('../models/FamilyMember');
 const Notification = require('../models/Notification');
 const whatsappSvc = require('./whatsappService');
+const fcmService = require('./fcmService');
 
-// Every 5 min — check missed doses
-cron.schedule('*/5 * * * *', async () => {
+// Every minute — check missed doses and send push notifications
+cron.schedule('* * * * *', async () => {
   try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);
+    const twoHoursAgo = new Date(now - 120 * 60 * 1000);
 
-    const missedReminders = await Reminder.find({
+    // Find reminders that are 5-120 minutes overdue and still pending
+    const overdueReminders = await Reminder.find({
       status: 'pending',
-      scheduledTime: { $gte: thirtyMinutesAgo, $lte: fiveMinutesAgo },
+      scheduledTime: {
+        $gte: twoHoursAgo,
+        $lte: fiveMinutesAgo,
+      },
     }).populate('medicine user');
 
-    for (const reminder of missedReminders) {
-      reminder.status = 'missed';
-      await reminder.save();
+    for (const reminder of overdueReminders) {
+      if (!reminder.user || !reminder.medicine) continue;
 
-      await Notification.create({
-        user: reminder.user._id,
-        title: '⚠️ Missed Dose',
-        message: `You missed ${reminder.medicine.name} scheduled at ${new Date(reminder.scheduledTime).toLocaleTimeString()}`,
-        type: 'missed_dose',
+      const diffMinutes = Math.floor((now - reminder.scheduledTime) / (1000 * 60));
+      const timeStr = new Date(reminder.scheduledTime).toLocaleTimeString('en-IN', {
+        hour: '2-digit', minute: '2-digit',
       });
 
-      if (!reminder.familyAlerted) {
+      // Send FCM push notification to user's device
+      if (reminder.user.fcmToken) {
+        await fcmService.sendPushNotification(reminder.user.fcmToken, {
+          title: '⚠️ Medicine Reminder!',
+          body: `Take ${reminder.medicine.name} now! ${diffMinutes} min overdue (scheduled ${timeStr})`,
+          reminderId: reminder._id.toString(),
+          medicineName: reminder.medicine.name,
+          type: 'missed_dose',
+        });
+      }
+
+      // Mark as missed after 30 minutes
+      if (diffMinutes >= 30 && !reminder.familyAlerted) {
+        reminder.status = 'missed';
+        await reminder.save();
+
+        // Create notification
+        await Notification.create({
+          user: reminder.user._id,
+          title: '⚠️ Missed Dose',
+          message: `You missed ${reminder.medicine.name} at ${timeStr}`,
+          type: 'missed_dose',
+        });
+
+        // Alert family via WhatsApp
         const familyMembers = await FamilyMember.find({
           user: reminder.user._id,
           receiveAlerts: true,
           isActive: true,
-        });
-
-        const scheduledTimeStr = new Date(reminder.scheduledTime).toLocaleTimeString('en-IN', {
-          hour: '2-digit', minute: '2-digit',
         });
 
         for (const member of familyMembers) {
@@ -45,7 +68,7 @@ cron.schedule('*/5 * * * *', async () => {
               member.whatsapp,
               reminder.user.name,
               reminder.medicine.name,
-              scheduledTimeStr
+              timeStr
             );
           }
         }
@@ -54,17 +77,17 @@ cron.schedule('*/5 * * * *', async () => {
         await reminder.save();
       }
     }
+
   } catch (err) {
-    console.error('Cron Error (missed doses):', err.message);
+    console.error('Cron Error:', err.message);
   }
 });
 
-// Midnight — create tomorrow's reminders
+// Daily midnight — create tomorrow's reminders
 cron.schedule('0 0 * * *', async () => {
   try {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-
     const activeMedicines = await Medicine.find({ isActive: true });
     let created = 0;
 
@@ -73,7 +96,6 @@ cron.schedule('0 0 * * *', async () => {
         const [hours, minutes] = timeStr.split(':').map(Number);
         const scheduledTime = new Date(tomorrow);
         scheduledTime.setHours(hours, minutes, 0, 0);
-
         const exists = await Reminder.findOne({ medicine: medicine._id, scheduledTime });
         if (!exists) {
           await Reminder.create({ user: medicine.user, medicine: medicine._id, scheduledTime });
@@ -83,11 +105,11 @@ cron.schedule('0 0 * * *', async () => {
     }
     console.log(`⏰ Created ${created} reminders for tomorrow`);
   } catch (err) {
-    console.error('Cron Error (create reminders):', err.message);
+    console.error('Cron Error:', err.message);
   }
 });
 
-// 9 AM — refill alerts
+// Daily 9 AM — refill alerts with push notification
 cron.schedule('0 9 * * *', async () => {
   try {
     const lowMedicines = await Medicine.find({
@@ -99,12 +121,21 @@ cron.schedule('0 9 * * *', async () => {
       await Notification.create({
         user: med.user._id,
         title: '💊 Refill Reminder',
-        message: `${med.name} has only ${med.pillsRemaining} pills left. Time to refill!`,
+        message: `${med.name} has only ${med.pillsRemaining} pills left!`,
         type: 'refill',
       });
+
+      // Send push notification for refill
+      if (med.user.fcmToken) {
+        await fcmService.sendPushNotification(med.user.fcmToken, {
+          title: '💊 Refill Reminder',
+          body: `${med.name} has only ${med.pillsRemaining} pills remaining. Refill soon!`,
+          type: 'refill',
+        });
+      }
     }
   } catch (err) {
-    console.error('Cron Error (refill):', err.message);
+    console.error('Cron Error:', err.message);
   }
 });
 
